@@ -5,6 +5,10 @@ A Neovim plugin that generates meaningful commit messages using AI based on your
 > [!WARNING]
 > Currently, the plugin only supports [openrouter.ai](https://openrouter.ai), but support for other services (OpenAI, Anthropic, local Ollama, etc.) will be added in the future
 
+## Demo
+
+https://github.com/user-attachments/assets/902927e2-8423-49cf-90fe-8d33dd830bad
+
 ## Features
 
 - Generate commit messages based on staged changes
