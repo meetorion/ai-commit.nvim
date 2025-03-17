@@ -68,22 +68,6 @@ Provide at least five different commit messages to choose from.]],
         end
 
         require("ai-commit").show_commit_suggestions(messages)
-
-        if config.auto_push then
-          vim.notify("Automatically pushing changes...", vim.log.levels.INFO)
-          local Job = require("plenary.job")
-          Job:new({
-            command = "git",
-            args = { "push" },
-            on_exit = function(_, push_return_val)
-              if push_return_val == 0 then
-                vim.notify("Changes pushed successfully!", vim.log.levels.INFO)
-              else
-                vim.notify("Failed to push changes", vim.log.levels.ERROR)
-              end
-            end,
-          }):start()
-        end
       else
         vim.notify("Failed to generate commit message: " .. response.body, vim.log.levels.ERROR)
       end
