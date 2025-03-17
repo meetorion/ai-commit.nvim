@@ -76,4 +76,3 @@ Provide at least five different commit messages to choose from.]],
 end
 
 return M
-
