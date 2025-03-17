@@ -5,7 +5,7 @@ M.config = {
   auto_push = false,
 }
 
-local commit_generator = require("commit_generator")
+local commit_generator = require("ai-commit.commit_generator")
 
 M.setup = function(opts)
   M.config = vim.tbl_deep_extend("force", M.config, opts or {})
@@ -28,4 +28,5 @@ vim.api.nvim_create_user_command("AICommit", function()
   M.generate_commit()
 end, {})
 
-return M 
+return M
+
