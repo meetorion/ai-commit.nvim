@@ -19,7 +19,6 @@ local function generate_commit_message(diff_context, recent_commits, callback)
 
   local curl = require("plenary.curl")
 
-  -- Уведомление сразу, перед началом запроса
   vim.schedule(function()
     vim.notify("Generating commit message...", vim.log.levels.INFO)
   end)
@@ -56,15 +55,13 @@ Provide at least five different commit messages to choose from.]],
     },
   }
 
-  -- Асинхронный HTTP-запрос
   curl.post("https://openrouter.ai/api/v1/chat/completions", {
     headers = {
       content_type = "application/json",
       authorization = "Bearer " .. api_key,
     },
-    body = vim.json.encode(data), -- <-- Используем vim.json.encode вместо vim.fn.json_encode
+    body = vim.json.encode(data),
 
-    -- Обрабатываем ответ асинхронно
     callback = vim.schedule_wrap(function(response)
       if response.status == 200 then
         local data = vim.json.decode(response.body)
@@ -77,7 +74,7 @@ Provide at least five different commit messages to choose from.]],
           end
         end
 
-        callback(messages) -- Отправляем результат в Telescope
+        callback(messages)
       else
         vim.notify("Failed to generate commit message: " .. response.body, vim.log.levels.ERROR)
       end
@@ -99,7 +96,6 @@ M.setup = function(opts)
 end
 
 M.generate_commit = function()
-  -- Get git diff
   local Job = require("plenary.job")
   Job:new({
     command = "git",
@@ -112,7 +108,6 @@ M.generate_commit = function()
           return
         end
 
-        -- Get recent commits for context
         Job:new({
           command = "git",
           args = { "log", "--oneline", "-n", "5" },
@@ -128,7 +123,6 @@ M.generate_commit = function()
   }):start()
 end
 
--- Create the AICommit command
 vim.api.nvim_create_user_command("AICommit", function()
   M.generate_commit()
 end, {})

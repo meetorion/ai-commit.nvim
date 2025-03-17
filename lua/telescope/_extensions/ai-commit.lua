@@ -11,7 +11,6 @@ local action_state = require("telescope.actions.state")
 local themes = require("telescope.themes")
 
 local commit_picker = function(opts)
-  -- Apply the theme
   opts = opts or {}
   if opts.theme == nil then
     opts = themes.get_dropdown(opts)
@@ -31,7 +30,6 @@ local commit_picker = function(opts)
           actions.close(prompt_bufnr)
 
           vim.notify("Creating commit...", vim.log.levels.INFO)
-          -- Create the commit with the selected message
           local Job = require("plenary.job")
           Job
             :new({
