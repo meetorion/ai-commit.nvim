@@ -44,6 +44,10 @@ Provide at least five different commit messages to choose from.]],
     },
   }
 
+  vim.schedule(function()
+    vim.notify("Generating commit message...", vim.log.levels.INFO)
+  end)
+
   curl.post("https://openrouter.ai/api/v1/chat/completions", {
     headers = {
       content_type = "application/json",
@@ -71,4 +75,5 @@ Provide at least five different commit messages to choose from.]],
   })
 end
 
-return M 
+return M
+
