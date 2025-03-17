@@ -57,24 +57,26 @@ local commit_picker = function(opts)
     opts = themes.get_dropdown(opts)
   end
 
-  pickers.new(opts, {
-    prompt_title = "AI Commit Messages",
-    finder = finders.new_table({
-      results = opts.messages or {},
-    }),
-    previewer = false,
-    sorter = conf.generic_sorter(opts),
-    attach_mappings = function(prompt_bufnr)
-      actions.select_default:replace(function()
-        handle_selection(prompt_bufnr)
-      end)
-      return true
-    end,
-  }):find()
+  pickers
+    .new(opts, {
+      prompt_title = "AI Commit Messages",
+      finder = finders.new_table({
+        results = opts.messages or {},
+      }),
+      previewer = false,
+      sorter = conf.generic_sorter(opts),
+      attach_mappings = function(prompt_bufnr)
+        actions.select_default:replace(function()
+          handle_selection(prompt_bufnr)
+        end)
+        return true
+      end,
+    })
+    :find()
 end
 
 return telescope.register_extension({
   exports = {
     commit = commit_picker,
   },
-}) 
+})

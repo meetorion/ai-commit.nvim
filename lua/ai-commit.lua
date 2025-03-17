@@ -19,4 +19,4 @@ vim.api.nvim_create_user_command("AICommit", function()
   M.generate_commit()
 end, {})
 
-return M 
+return M
