@@ -6,8 +6,6 @@ M.config = {
   auto_push = false,
 }
 
-local commit_generator = require("ai-commit.commit_generator")
-
 M.setup = function(opts)
   if opts then
     M.config = vim.tbl_deep_extend("force", M.config, opts)
@@ -15,7 +13,7 @@ M.setup = function(opts)
 end
 
 M.generate_commit = function()
-  commit_generator.generate_commit(M.config)
+  require("commit_generator").generate_commit(M.config)
 end
 
 M.show_commit_suggestions = function(messages)
