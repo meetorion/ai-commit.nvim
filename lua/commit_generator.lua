@@ -26,6 +26,12 @@ end
 
 local function collect_git_data()
   local diff_context = vim.fn.system("git -P diff --cached")
+
+  if diff_context == "" then
+    vim.notify("No staged changes found. Add files with 'git add' first.", vim.log.levels.ERROR)
+    return nil
+  end
+
   local recent_commits = vim.fn.system("git log --oneline -n 5")
 
   return {
@@ -92,6 +98,10 @@ function M.generate_commit(config)
   end
 
   local git_data = collect_git_data()
+  if not git_data then
+    return
+  end
+
   local prompt = create_prompt(git_data)
   local data = prepare_request_data(prompt, config.model)
 
