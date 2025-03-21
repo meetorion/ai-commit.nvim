@@ -3,9 +3,19 @@ local M = {}
 local openrouter_api_endpoint = "https://openrouter.ai/api/v1/chat/completions"
 -- TODO: Make commit message template configurable
 local commit_prompt_template = [[
-Generate a git commit message following these instructions:
-Use the conventional commit format (type: concise description), remember to use semantic types like feat, fix, docs, style, refactor, perf, test, chore, etc.
-Return ONLY the commit message - no introduction, no explanation, no quotes around it. Don't forget to specify scope like this: feat(auth)
+Generate a git commit messages following these instructions:
+Use the conventional commit format: type(scope): concise description. Remember to use semantic types like feat, fix, docs, style, refactor, perf, test, chore
+Return ONLY the commit message - no introduction, no quotes around it, and no explanations of purpose or benefits (avoid phrases like "for better performance", "to improve readability", etc.).
+The commit message should be concise, stating only WHAT was done, not WHY. Only the commit messages line by line.
+
+Examples of good commits:
+feat(api): add user authentication endpoint
+fix(ui): resolve button alignment issue
+
+Examples to avoid:
+feat(api): add user authentication endpoint for improved security
+fix(ui): resolve button alignment issue to enhance user experience
+
 Git diff:
 %s
 Recent commits:
