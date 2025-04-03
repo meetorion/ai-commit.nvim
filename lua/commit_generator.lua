@@ -3,24 +3,27 @@ local M = {}
 local openrouter_api_endpoint = "https://openrouter.ai/api/v1/chat/completions"
 -- TODO: Make commit message template configurable
 local commit_prompt_template = [[
-Generate a git commit messages following these instructions:
-Use the conventional commit format: type(scope): concise description. Remember to use semantic types like feat, fix, docs, style, refactor, perf, test, chore
-Return ONLY the commit message - no introduction, no quotes around it, and no explanations of purpose or benefits (avoid phrases like "for better performance", "to improve readability", etc.).
-The commit message should be concise, stating only WHAT was done, not WHY. Only the commit messages line by line.
+Generate 5 different git commit messages based on the following git diff:
 
-Examples of good commits:
-feat(api): add user authentication endpoint
-fix(ui): resolve button alignment issue
+Use the conventional commit format: type(scope): concise description
+Analyze the entire diff and identify different aspects of the changes (new features, bug fixes, refactoring, etc.)
+For each message, focus on a different significant aspect of the changes
+Return ONLY the commit messages - no introduction, no quotes, and no explanations
+Each message should be concise, stating only WHAT was done, not WHY
+Each message should have a single type and scope, focusing on one aspect of the changes
 
-Examples to avoid:
-feat(api): add user authentication endpoint for improved security
-fix(ui): resolve button alignment issue to enhance user experience
+Examples of good diverse commit messages for the same diff:
+feat(auth): implement user login functionality
+fix(validation): correct email format validation
+refactor(api): restructure authentication routes
+style(forms): standardize input field appearance
+test(auth): add unit tests for authentication flow
 
 Git diff:
 %s
 Recent commits:
 %s
-Provide at least 5 different commit messages to choose from.]]
+]]
 
 local function validate_api_key(config)
   local api_key = config.openrouter_api_key or vim.env.OPENROUTER_API_KEY
