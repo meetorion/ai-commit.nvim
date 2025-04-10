@@ -38,7 +38,7 @@ local function validate_api_key(config)
 end
 
 local function collect_git_data()
-  local diff_context = vim.fn.system("git -P diff --cached")
+  local diff_context = vim.fn.system("git -P diff --cached -U10")
 
   if diff_context == "" then
     vim.notify("No staged changes found. Add files with 'git add' first.", vim.log.levels.ERROR)
