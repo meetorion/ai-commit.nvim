@@ -48,103 +48,12 @@ local language_configs = {
 
 -- Default commit message template
 local default_commit_template = [[
--- You are an expert developer analyzing git changes. Generate 5 meaningful git commit messages based on the provided diff, following GitHub's commit message best practices.
---
--- prompt = 'Write commit message for the change with commitizen convention. Keep the title under 50 characters and wrap message at 72 characters. Format as a gitcommit code block.',
---     context = 'git:staged',
---
--- ANALYSIS REQUIREMENTS:
--- 1. Carefully examine the diff to understand the actual changes made
--- 2. Identify the primary purpose, scope, and impact of the changes
--- 3. Consider the context from recent commits to avoid redundancy
--- 4. Focus on the business value, technical significance, and user impact
--- 5. Analyze file paths, function names, and code patterns for accurate scoping
---
--- COMMIT MESSAGE STRUCTURE:
--- Follow the conventional commit format with detailed descriptions:
---
--- Format: type(scope): subject
---
--- body (optional but recommended for complex changes)
---
--- footer (optional - for breaking changes, issue references)
---
--- COMMIT MESSAGE RULES:
--- - Subject line: type(scope): brief description in imperative mood
--- - Types: feat, fix, refactor, perf, style, test, docs, chore, build, ci, revert
--- - Scope: specific module, component, file, or feature name (lowercase)
--- - Subject: imperative mood, lowercase, no period, 50 chars max
--- - Body: explain what and why (not how), wrap at 72 chars
--- - Footer: breaking changes (BREAKING CHANGE:) and issue refs (#123)
---
--- DETAILED TYPE GUIDELINES:
--- - feat: new features, enhancements, or capabilities
--- - fix: bug fixes, error handling, crash prevention
--- - refactor: code restructuring without behavior change
--- - perf: performance improvements, optimization
--- - style: formatting, whitespace, semicolons (no code change)
--- - test: adding or updating tests, test utilities
--- - docs: documentation updates, comments, README
--- - chore: maintenance, dependencies, tooling, configuration
--- - build: build system, external dependencies, CI/CD
--- - ci: continuous integration, workflows, automation
--- - revert: reverting previous commits
---
--- SCOPE GUIDELINES:
--- - Use specific file/module names: auth, api, ui, db, config
--- - For multiple files in same area: use common parent
--- - For cross-cutting changes: use feature name
--- - Omit scope only for very broad changes
---
--- QUALITY CRITERIA:
--- - Prioritize user-facing changes and critical fixes
--- - Highlight performance improvements and security enhancements
--- - Include breaking changes with BREAKING CHANGE: prefix
--- - Reference related issues with #issue-number
--- - Focus on the most significant changes first
--- - Ensure messages provide clear context for code reviewers
--- - Make messages useful for release notes and changelogs
---
--- DETAILED EXAMPLES:
---
--- Simple changes:
--- feat(auth): add OAuth2 integration with Google provider
--- fix(api): resolve memory leak in user session cleanup
--- perf(db): optimize user query with connection pooling
--- refactor(ui): extract form validation into reusable hooks
--- test(auth): add integration tests for login flow
--- docs(readme): update installation guide for Node.js 18+
--- chore(deps): update lodash to 4.17.21 for security patch
---
--- Complex changes with body:
--- feat(payment): implement Stripe payment processing
---
--- Add complete payment flow including card validation,
--- payment intent creation, and webhook handling for
--- subscription management.
---
--- Includes error handling for declined cards and
--- automatic retry logic for failed payments.
---
--- Closes #145
---
--- Breaking changes:
--- feat(api)!: migrate user endpoints to v2 format
---
--- BREAKING CHANGE: User API endpoints now return user data
--- in nested 'profile' object instead of top-level fields.
--- Update client code to access user.profile.name instead
--- of user.name.
---
--- Migration guide: https://docs.example.com/api-v2-migration
-
 Git diff:
 %s
 
 Recent commits (for context):
 %s
 
--- Generate exactly 5 commit messages following the above guidelines, ordered by importance and impact. Include body text for complex changes when necessary:
 'Write commit message for the change with commitizen convention. Keep the title under 50 characters and wrap message at 72 characters. Format as a gitcommit code block.',
 
 ]]
@@ -180,7 +89,7 @@ end
 local function create_prompt(git_data, language, custom_template)
 	-- Use custom template if provided, otherwise use default
 	local template = custom_template or default_commit_template
-	
+
 	-- Get language configuration
 	local lang_config = language_configs[language] or language_configs["en"]
 
