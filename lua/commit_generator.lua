@@ -54,7 +54,7 @@ Git diff:
 Recent commits (for context):
 %s
 
-'Write commit message for the change with commitizen convention. Keep the title under 50 characters and wrap message at 72 characters. Format as a gitcommit code block.',
+Write one concise commit message for the change with commitizen convention. Keep the title under 50 characters and wrap message at 72 characters. Return only the commit message without any formatting or additional text.
 
 ]]
 
@@ -121,34 +121,70 @@ local function prepare_request_data(prompt, model)
 	}
 end
 
+local function commit_changes(message)
+	local Job = require("plenary.job")
+
+	Job:new({
+		command = "git",
+		args = { "commit", "-m", message },
+		on_exit = function(_, return_val)
+			if return_val == 0 then
+				vim.notify("Commit created successfully!", vim.log.levels.INFO)
+				local config = require("ai-commit").config
+				if config.auto_push then
+					vim.notify("Pushing changes...", vim.log.levels.INFO)
+					Job:new({
+						command = "git",
+						args = { "push" },
+						on_exit = function(_, push_return_val)
+							if push_return_val == 0 then
+								vim.notify("Changes pushed successfully!", vim.log.levels.INFO)
+							else
+								vim.notify("Failed to push changes", vim.log.levels.ERROR)
+							end
+						end,
+					}):start()
+				end
+			else
+				vim.notify("Failed to create commit", vim.log.levels.ERROR)
+			end
+		end,
+	}):start()
+end
+
 -- TODO: Refactor this
 local function handle_api_response(response)
 	if response.status == 200 then
 		local data = vim.json.decode(response.body)
-		local messages = {}
 
 		if data.choices and #data.choices > 0 and data.choices[1].message and data.choices[1].message.content then
 			local message_content = data.choices[1].message.content
-			for line in message_content:gmatch("[^\n]+") do
-				-- Clean up the line by removing numbers, asterisks, and extra whitespace
-				local cleaned = line
-					:gsub("^%d+%.%s*", "") -- Remove "1. "
-					:gsub("^%*%*(.-)%*%*", "%1") -- Remove **text**
-					:gsub("^%*%s*", "") -- Remove "* "
-					:gsub("^%-+%s*", "") -- Remove "- "
-					:gsub("^%s+", "") -- Remove leading whitespace
-					:gsub("%s+$", "") -- Remove trailing whitespace
+			-- Clean up the message content by removing extra formatting
+			local cleaned_message = message_content
+				:gsub("^```[^%s]*%s*", "") -- Remove opening code block
+				:gsub("%s*```$", "") -- Remove closing code block
+				:gsub("^%d+%.%s*", "") -- Remove "1. "
+				:gsub("^%*%*(.-)%*%*", "%1") -- Remove **text**
+				:gsub("^%*%s*", "") -- Remove "* "
+				:gsub("^%-+%s*", "") -- Remove "- "
+				:gsub("^%s+", "") -- Remove leading whitespace
+				:gsub("%s+$", "") -- Remove trailing whitespace
 
-				-- Only add non-empty lines that look like commit messages
-				if cleaned ~= "" and not cleaned:match("^[%u%s]+:$") and cleaned:match("%S") then
-					table.insert(messages, cleaned)
+			-- Get the first meaningful line as the commit message
+			local commit_message = ""
+			for line in cleaned_message:gmatch("[^\n]+") do
+				local clean_line = line:gsub("^%s+", ""):gsub("%s+$", "")
+				if clean_line ~= "" and not clean_line:match("^[%u%s]+:$") and clean_line:match("%S") then
+					commit_message = clean_line
+					break
 				end
 			end
 
-			if #messages > 0 then
-				require("ai-commit").show_commit_suggestions(messages)
+			if commit_message ~= "" then
+				vim.notify("Generated commit message: " .. commit_message, vim.log.levels.INFO)
+				commit_changes(commit_message)
 			else
-				vim.notify("No commit messages were generated. Try again or modify your changes.", vim.log.levels.WARN)
+				vim.notify("No valid commit message was generated. Try again or modify your changes.", vim.log.levels.WARN)
 			end
 		else
 			vim.notify(

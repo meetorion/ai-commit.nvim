@@ -10,8 +10,7 @@ A Neovim plugin that generates meaningful commit messages using AI based on your
 ## Features
 
 - Generate commit messages based on staged changes
-- Multiple AI-generated commit suggestions
-- Clean and minimal dropdown interface
+- AI-generated commit message that's automatically applied
 - Follows conventional commit format
 - Optional automatic push after commit
 - Asynchronous message generation without UI blocking
@@ -21,7 +20,6 @@ A Neovim plugin that generates meaningful commit messages using AI based on your
 - Neovim >= 0.8.0
 - Git
 - [plenary.nvim](https://github.com/nvim-lua/plenary.nvim)
-- [telescope.nvim](https://github.com/nvim-telescope/telescope.nvim) (for commit message selection)
 
 ## Installation
 
@@ -32,7 +30,6 @@ Using [lazy.nvim](https://github.com/folke/lazy.nvim):
     "meetorion/ai-commit.nvim",
     dependencies = {
         "nvim-lua/plenary.nvim",
-        "nvim-telescope/telescope.nvim",
     },
     config = function()
         require("ai-commit").setup({
@@ -116,10 +113,9 @@ If no custom template is provided, the plugin uses its default comprehensive tem
 
 1. Stage your changes using git add
 2. Run `:AICommit` command
-3. Wait for AI to generate commit messages
-4. Choose from the suggested messages in the dropdown window
-5. The selected message will be used for the commit
+3. Wait for AI to generate a commit message
+4. The AI-generated message will be automatically used for the commit
 
 ## Commands
 
-- `:AICommit` - Start the commit message generation process
+- `:AICommit` - Generate and apply an AI commit message
