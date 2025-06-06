@@ -3,26 +3,43 @@ local M = {}
 local openrouter_api_endpoint = "https://openrouter.ai/api/v1/chat/completions"
 -- TODO: Make commit message template configurable
 local commit_prompt_template = [[
-Generate 5 different git commit messages based on the following git diff:
+You are an expert developer analyzing git changes. Generate 5 meaningful git commit messages based on the provided diff.
 
-Use the conventional commit format: type(scope): concise description
-Analyze the entire diff and identify different aspects of the changes (new features, bug fixes, refactoring, etc.)
-For each message, focus on a different significant aspect of the changes
-Return ONLY the commit messages - no introduction, no quotes, and no explanations
-Each message should be concise, stating only WHAT was done, not WHY
-Each message should have a single type and scope, focusing on one aspect of the changes
+ANALYSIS REQUIREMENTS:
+1. Carefully examine the diff to understand the actual changes made
+2. Identify the primary purpose and impact of the changes
+3. Consider the context from recent commits to avoid redundancy
+4. Focus on the business value and technical significance
 
-Examples of good diverse commit messages for the same diff:
-feat(auth): implement user login functionality
-fix(validation): correct email format validation
-refactor(api): restructure authentication routes
-style(forms): standardize input field appearance
-test(auth): add unit tests for authentication flow
+COMMIT MESSAGE RULES:
+- Use conventional commit format: type(scope): description
+- Types: feat, fix, refactor, perf, style, test, docs, chore, build, ci
+- Scope should be specific (module, component, or feature name)
+- Description should be imperative mood, lowercase, no period
+- Maximum 72 characters per message
+- Each message should capture a different meaningful aspect
+
+QUALITY CRITERIA:
+- Prioritize user-facing changes and bug fixes
+- Highlight performance improvements and security enhancements  
+- Include breaking changes with appropriate indicators
+- Focus on the most significant changes first
+- Ensure messages would be helpful in release notes
+
+EXAMPLES:
+feat(auth): add OAuth2 integration with Google and GitHub
+fix(api): resolve memory leak in user session handling
+perf(db): optimize query performance with connection pooling
+refactor(ui): extract reusable form validation components
+docs(readme): update installation guide with new dependencies
 
 Git diff:
 %s
-Recent commits:
+
+Recent commits (for context):
 %s
+
+Generate exactly 5 commit messages, ordered by importance:
 ]]
 
 local function validate_api_key(config)
