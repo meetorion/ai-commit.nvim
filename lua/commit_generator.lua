@@ -212,8 +212,19 @@ local function handle_api_response(response)
 
     if data.choices and #data.choices > 0 and data.choices[1].message and data.choices[1].message.content then
       local message_content = data.choices[1].message.content
-      for msg in message_content:gmatch("[^\n]+") do
-        table.insert(messages, msg)
+      for line in message_content:gmatch("[^\n]+") do
+        -- Clean up the line by removing numbers, asterisks, and extra whitespace
+        local cleaned = line:gsub("^%d+%.%s*", "")  -- Remove "1. "
+                            :gsub("^%*%*(.-)%*%*", "%1")  -- Remove **text**
+                            :gsub("^%*%s*", "")  -- Remove "* "
+                            :gsub("^%-+%s*", "")  -- Remove "- "
+                            :gsub("^%s+", "")  -- Remove leading whitespace
+                            :gsub("%s+$", "")  -- Remove trailing whitespace
+
+        -- Only add non-empty lines that look like commit messages
+        if cleaned ~= "" and not cleaned:match("^[%u%s]+:$") and cleaned:match("%S") then
+          table.insert(messages, cleaned)
+        end
       end
 
       if #messages > 0 then
