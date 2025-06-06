@@ -46,8 +46,8 @@ local language_configs = {
 	},
 }
 
--- TODO: Make commit message template configurable
-local commit_prompt_template = [[
+-- Default commit message template
+local default_commit_template = [[
 -- You are an expert developer analyzing git changes. Generate 5 meaningful git commit messages based on the provided diff, following GitHub's commit message best practices.
 --
 -- prompt = 'Write commit message for the change with commitizen convention. Keep the title under 50 characters and wrap message at 72 characters. Format as a gitcommit code block.',
@@ -177,7 +177,10 @@ local function collect_git_data()
 	}
 end
 
-local function create_prompt(git_data, language)
+local function create_prompt(git_data, language, custom_template)
+	-- Use custom template if provided, otherwise use default
+	local template = custom_template or default_commit_template
+	
 	-- Get language configuration
 	local lang_config = language_configs[language] or language_configs["en"]
 
@@ -185,7 +188,7 @@ local function create_prompt(git_data, language)
 	local language_instruction = lang_config.instruction
 
 	-- Inject language instruction into the template
-	local language_enhanced_template = commit_prompt_template:gsub(
+	local language_enhanced_template = template:gsub(
 		"Generate exactly 5 commit messages following the above guidelines",
 		language_instruction .. "\n\nGenerate exactly 5 commit messages following the above guidelines"
 	)
@@ -309,7 +312,7 @@ function M.generate_commit(config)
 		return
 	end
 
-	local prompt = create_prompt(git_data, config.language or "zh")
+	local prompt = create_prompt(git_data, config.language or "zh", config.commit_template)
 	local data = prepare_request_data(prompt, config.model)
 
 	send_api_request(api_key, data)

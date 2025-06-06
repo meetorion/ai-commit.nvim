@@ -5,6 +5,7 @@ M.config = {
   model = "qwen/qwen-2.5-72b-instruct:free",
   auto_push = false,
   language = "zh", -- Default language for commit messages: "zh" (Chinese), "en" (English), "ja" (Japanese), "ko" (Korean), etc.
+  commit_template = nil, -- Custom commit message template (optional)
 }
 
 M.setup = function(opts)

@@ -50,6 +50,7 @@ Using [lazy.nvim](https://github.com/folke/lazy.nvim):
   model = "qwen/qwen-2.5-72b-instruct:free", -- default model
   auto_push = false, -- whether to automatically push after commit
   language = "zh", -- language for commit messages: "zh", "en", "ja", "ko", "es", "fr", "de", "ru"
+  commit_template = nil, -- custom commit message template (optional)
 }
 ```
 
@@ -74,6 +75,42 @@ require("ai-commit").setup({
     language = "en",
 })
 ```
+
+### Custom Commit Template
+
+You can customize the AI prompt template used for generating commit messages by setting the `commit_template` option. This allows you to define your own format, style, and guidelines for commit messages.
+
+Example custom template:
+
+```lua
+require("ai-commit").setup({
+    openrouter_api_key = "YOUR_API_KEY",
+    language = "en",
+    commit_template = [[
+You are a senior software engineer creating commit messages.
+
+Analyze this git diff and create 5 concise commit messages following these rules:
+1. Use imperative mood (e.g., "Add feature" not "Added feature")
+2. Keep the first line under 50 characters
+3. Focus on the "why" not the "what"
+4. Use conventional commit format: type(scope): description
+
+Git diff:
+%s
+
+Recent commits for context:
+%s
+
+Generate exactly 5 commit messages following the above guidelines:
+    ]]
+})
+```
+
+The template must include two `%s` placeholders:
+- First `%s` will be replaced with the git diff
+- Second `%s` will be replaced with recent commit history
+
+If no custom template is provided, the plugin uses its default comprehensive template that follows conventional commit standards.
 
 ## Usage
 
