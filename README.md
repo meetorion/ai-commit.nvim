@@ -49,7 +49,30 @@ Using [lazy.nvim](https://github.com/folke/lazy.nvim):
   openrouter_api_key = "YOUR_API_KEY", -- or set OPENROUTER_API_KEY environment variable
   model = "qwen/qwen-2.5-72b-instruct:free", -- default model
   auto_push = false, -- whether to automatically push after commit
+  language = "zh", -- language for commit messages: "zh", "en", "ja", "ko", "es", "fr", "de", "ru"
 }
+```
+
+### Language Support
+
+The plugin supports multiple languages for generating commit messages:
+
+- **zh** (中文) - Chinese (default)
+- **en** (English) - English
+- **ja** (日本語) - Japanese
+- **ko** (한국어) - Korean
+- **es** (Español) - Spanish
+- **fr** (Français) - French
+- **de** (Deutsch) - German
+- **ru** (Русский) - Russian
+
+Example configuration for English commit messages:
+
+```lua
+require("ai-commit").setup({
+    openrouter_api_key = "YOUR_API_KEY",
+    language = "en",
+})
 ```
 
 ## Usage

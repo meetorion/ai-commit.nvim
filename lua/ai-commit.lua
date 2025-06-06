@@ -4,6 +4,7 @@ M.config = {
   openrouter_api_key = nil,
   model = "qwen/qwen-2.5-72b-instruct:free",
   auto_push = false,
+  language = "zh", -- Default language for commit messages: "zh" (Chinese), "en" (English), "ja" (Japanese), "ko" (Korean), etc.
 }
 
 M.setup = function(opts)
