@@ -2,6 +2,41 @@ local M = {}
 
 local openrouter_api_endpoint = "https://openrouter.ai/api/v1/chat/completions"
 
+-- Configuration for request length limits
+local MAX_DIFF_CHARS = 8000  -- Maximum characters for diff content
+local MAX_COMMITS_CHARS = 2000  -- Maximum characters for recent commits
+local MAX_TOTAL_PROMPT_CHARS = 12000  -- Maximum total prompt characters
+
+-- Function to safely truncate text while preserving readability
+local function truncate_text(text, max_chars, suffix)
+	suffix = suffix or "\n\n[... truncated due to length limit ...]"
+	if #text <= max_chars then
+		return text
+	end
+	
+	-- Try to find a good break point (end of line)
+	local truncate_at = max_chars - #suffix
+	local line_break = text:find("\n", truncate_at - 200)
+	if line_break and line_break > truncate_at - 500 then
+		truncate_at = line_break
+	end
+	
+	return text:sub(1, truncate_at) .. suffix
+end
+
+-- Function to validate and truncate git data to prevent request size issues
+local function validate_and_truncate_git_data(git_data)
+	-- Truncate diff if too long
+	git_data.diff = truncate_text(git_data.diff, MAX_DIFF_CHARS, 
+		"\n\n[... diff truncated due to length limit ...]")
+	
+	-- Truncate commits if too long
+	git_data.commits = truncate_text(git_data.commits, MAX_COMMITS_CHARS,
+		"\n[... commits truncated due to length limit ...]")
+	
+	return git_data
+end
+
 -- Language configuration for commit messages
 local language_configs = {
 	zh = {
@@ -257,7 +292,18 @@ function M.generate_commit(config)
 		return
 	end
 
+	-- Validate and truncate git data to prevent request size issues
+	git_data = validate_and_truncate_git_data(git_data)
+
 	local prompt = create_prompt(git_data, config.language or "zh", config.commit_template)
+	
+	-- Check total prompt length and truncate if necessary
+	if #prompt > MAX_TOTAL_PROMPT_CHARS then
+		prompt = truncate_text(prompt, MAX_TOTAL_PROMPT_CHARS, 
+			"\n\n[... prompt truncated due to length limit ...]")
+		vim.notify("Request was too long and has been truncated. You may want to stage fewer changes.", vim.log.levels.WARN)
+	end
+	
 	local data = prepare_request_data(prompt, config.model)
 
 	send_api_request(api_key, data)
