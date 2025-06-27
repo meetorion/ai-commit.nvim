@@ -2,38 +2,69 @@ local M = {}
 
 local openrouter_api_endpoint = "https://openrouter.ai/api/v1/chat/completions"
 
--- Configuration for request length limits
-local MAX_DIFF_CHARS = 8000  -- Maximum characters for diff content
-local MAX_COMMITS_CHARS = 2000  -- Maximum characters for recent commits
-local MAX_TOTAL_PROMPT_CHARS = 12000  -- Maximum total prompt characters
+-- Configuration for improved diff processing
+local MAX_CONTEXT_LINES = 15  -- Context lines for git diff to balance detail and size
 
--- Function to safely truncate text while preserving readability
-local function truncate_text(text, max_chars, suffix)
-	suffix = suffix or "\n\n[... truncated due to length limit ...]"
-	if #text <= max_chars then
-		return text
+-- Function to optimize diff content by removing excessive context while preserving semantic meaning
+local function optimize_diff_content(diff_text)
+	-- Split diff into lines
+	local lines = {}
+	for line in diff_text:gmatch("[^\n]*\n?") do
+		if line ~= "" then
+			table.insert(lines, line)
+		end
 	end
 	
-	-- Try to find a good break point (end of line)
-	local truncate_at = max_chars - #suffix
-	local line_break = text:find("\n", truncate_at - 200)
-	if line_break and line_break > truncate_at - 500 then
-		truncate_at = line_break
+	-- Process diff to keep meaningful changes while reducing excessive context
+	local optimized_lines = {}
+	local in_hunk = false
+	local consecutive_context = 0
+	local max_consecutive_context = 3
+	
+	for i, line in ipairs(lines) do
+		-- Keep diff headers
+		if line:match("^diff ") or line:match("^index ") or line:match("^%+%+%+ ") or line:match("^%-%-%- ") then
+			table.insert(optimized_lines, line)
+			in_hunk = false
+			consecutive_context = 0
+		-- Keep hunk headers
+		elseif line:match("^@@ ") then
+			table.insert(optimized_lines, line)
+			in_hunk = true
+			consecutive_context = 0
+		-- Process content lines
+		elseif in_hunk then
+			local first_char = line:sub(1, 1)
+			-- Always keep added/removed lines
+			if first_char == "+" or first_char == "-" then
+				table.insert(optimized_lines, line)
+				consecutive_context = 0
+			-- Handle context lines more intelligently
+			elseif first_char == " " then
+				consecutive_context = consecutive_context + 1
+				-- Keep limited context around changes
+				if consecutive_context <= max_consecutive_context then
+					table.insert(optimized_lines, line)
+				elseif consecutive_context == max_consecutive_context + 1 then
+					-- Add ellipsis to indicate skipped content
+					table.insert(optimized_lines, " ... (context omitted for brevity)\n")
+				end
+				-- Skip excessive context lines
+			end
+		else
+			table.insert(optimized_lines, line)
+		end
 	end
 	
-	return text:sub(1, truncate_at) .. suffix
+	return table.concat(optimized_lines)
 end
 
--- Function to validate and truncate git data to prevent request size issues
-local function validate_and_truncate_git_data(git_data)
-	-- Truncate diff if too long
-	git_data.diff = truncate_text(git_data.diff, MAX_DIFF_CHARS, 
-		"\n\n[... diff truncated due to length limit ...]")
+-- Function to optimize git data for better semantic understanding
+local function optimize_git_data(git_data)
+	-- Optimize diff content while preserving semantic meaning
+	git_data.diff = optimize_diff_content(git_data.diff)
 	
-	-- Truncate commits if too long
-	git_data.commits = truncate_text(git_data.commits, MAX_COMMITS_CHARS,
-		"\n[... commits truncated due to length limit ...]")
-	
+	-- Keep recent commits for context (no truncation for better understanding)
 	return git_data
 end
 
@@ -81,16 +112,29 @@ local language_configs = {
 	},
 }
 
--- Default commit message template
+-- Enhanced commit message template for comprehensive analysis
 local default_commit_template = [[
+你是一个专业的软件工程师，负责分析代码变更并生成高质量的commit消息。
+
+请分析以下git差异和相关上下文：
+
 Git diff:
 %s
 
 Recent commits (for context):
 %s
 
-Write one concise commit message for the change with commitizen convention. Keep the title under 50 characters and wrap message at 72 characters. Return only the commit message without any formatting or additional text.
+请生成一个详细而准确的commit消息，要求：
+1. 使用常规commit格式 (type(scope): description)
+2. 准确描述变更的内容和原因
+3. 标题控制在50字符以内
+4. 如果需要，可以包含更详细的描述
+5. 关注变更的业务价值和技术影响
+6. 使用清晰、专业的语言
+7. 深入理解代码变更的语义和目的
+8. 考虑变更对整个项目的影响
 
+只返回commit消息，不要包含其他格式或额外文本。
 ]]
 
 local function validate_api_key(config)
@@ -106,7 +150,7 @@ local function validate_api_key(config)
 end
 
 local function collect_git_data()
-	local diff_context = vim.fn.system("git -P diff --cached -U10")
+	local diff_context = vim.fn.system("git -P diff --cached -U" .. MAX_CONTEXT_LINES)
 
 	if diff_context == "" then
 		vim.notify("No staged changes found. Add files with 'git add' first.", vim.log.levels.ERROR)
@@ -292,16 +336,16 @@ function M.generate_commit(config)
 		return
 	end
 
-	-- Validate and truncate git data to prevent request size issues
-	git_data = validate_and_truncate_git_data(git_data)
+	-- Optimize git data for better semantic understanding
+	git_data = optimize_git_data(git_data)
 
 	local prompt = create_prompt(git_data, config.language or "zh", config.commit_template)
 	
-	-- Check total prompt length and truncate if necessary
-	if #prompt > MAX_TOTAL_PROMPT_CHARS then
-		prompt = truncate_text(prompt, MAX_TOTAL_PROMPT_CHARS, 
-			"\n\n[... prompt truncated due to length limit ...]")
-		vim.notify("Request was too long and has been truncated. You may want to stage fewer changes.", vim.log.levels.WARN)
+	-- Log prompt size for monitoring without truncation
+	if #prompt > 50000 then
+		vim.notify("Large diff detected. Processing comprehensive semantic analysis...", vim.log.levels.INFO)
+	elseif #prompt > 20000 then
+		vim.notify("Medium-sized diff detected. Analyzing detailed changes...", vim.log.levels.INFO)
 	end
 	
 	local data = prepare_request_data(prompt, config.model)

@@ -104,6 +104,7 @@ Generate exactly 5 commit messages following the above guidelines:
 ```
 
 The template must include two `%s` placeholders:
+
 - First `%s` will be replaced with the git diff
 - Second `%s` will be replaced with recent commit history
 
