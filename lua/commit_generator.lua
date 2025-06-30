@@ -353,8 +353,19 @@ function M.generate_commit(config)
 	local advanced_analysis = require("advanced_analysis")
 	local context = advanced_analysis.analyze_commit_context(git_data)
 	
+	-- CI/CD intelligent enhancement
+	local cicd_enhancement = nil
+	if pcall(require, "cicd_orchestrator") then
+		local cicd_orchestrator = require("cicd_orchestrator")
+		cicd_enhancement = cicd_orchestrator.enhance_commit_with_cicd_intelligence(git_data, config)
+	end
+	
 	-- Add context to prompt
 	prompt = prompt .. "\n\n" .. context.enhanced_context
+	
+	if cicd_enhancement and cicd_enhancement.cicd_aware then
+		prompt = prompt .. "\n\n" .. cicd_enhancement.enhanced_prompt
+	end
 	
 	-- Log prompt size for monitoring without truncation
 	if #prompt > 50000 then
@@ -366,6 +377,74 @@ function M.generate_commit(config)
 	local data = prepare_request_data(prompt, config.model)
 
 	send_api_request(api_key, data)
+end
+
+-- Multi-provider commit generation (NEW)
+function M.generate_commit_multi_provider(config)
+	local git_data = collect_git_data()
+	if not git_data then
+		return
+	end
+
+	-- Check if team standards should be applied
+	local team_standards = require("team_standards")
+	local team_data = team_standards.generate_team_commit(git_data, config)
+	
+	local prompt
+	if team_data then
+		prompt = team_data.prompt
+	else
+		-- Optimize git data for better semantic understanding
+		git_data = optimize_git_data(git_data)
+		prompt = create_prompt(git_data, config.language or "zh", config.commit_template)
+	end
+	
+	-- Enhanced context with advanced analysis
+	local advanced_analysis = require("advanced_analysis")
+	local context = advanced_analysis.analyze_commit_context(git_data)
+	
+	-- CI/CD intelligent enhancement
+	local cicd_enhancement = nil
+	if pcall(require, "cicd_orchestrator") then
+		local cicd_orchestrator = require("cicd_orchestrator")
+		cicd_enhancement = cicd_orchestrator.enhance_commit_with_cicd_intelligence(git_data, config)
+	end
+	
+	-- Add context to prompt
+	prompt = prompt .. "\n\n" .. context.enhanced_context
+	
+	if cicd_enhancement and cicd_enhancement.cicd_aware then
+		prompt = prompt .. "\n\n" .. cicd_enhancement.enhanced_prompt
+	end
+	
+	-- Log prompt size for monitoring without truncation
+	if #prompt > 50000 then
+		vim.notify("大型差异检测。正在处理全面语义分析...", vim.log.levels.INFO)
+	elseif #prompt > 20000 then
+		vim.notify("中等规模差异检测。正在分析详细变更...", vim.log.levels.INFO)
+	end
+	
+	-- Prepare messages in standardized format
+	local messages = {
+		{
+			role = "system",
+			content = "You are a helpful assistant that generates git commit messages following the conventional commits specification."
+		},
+		{
+			role = "user", 
+			content = prompt
+		}
+	}
+	
+	-- Use multi-provider request manager
+	local ai_request_manager = require("ai_request_manager")
+	local task_type = "coding" -- Use coding-optimized models
+	
+	ai_request_manager.send_ai_request(messages, config, {
+		task_type = task_type,
+		max_retries = config.retry_attempts or 2,
+		timeout = config.timeout or 30000
+	})
 end
 
 -- Export functions for use by other modules
