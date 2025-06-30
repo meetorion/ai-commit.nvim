@@ -336,10 +336,25 @@ function M.generate_commit(config)
 		return
 	end
 
-	-- Optimize git data for better semantic understanding
-	git_data = optimize_git_data(git_data)
-
-	local prompt = create_prompt(git_data, config.language or "zh", config.commit_template)
+	-- Check if team standards should be applied
+	local team_standards = require("team_standards")
+	local team_data = team_standards.generate_team_commit(git_data, config)
+	
+	local prompt
+	if team_data then
+		prompt = team_data.prompt
+	else
+		-- Optimize git data for better semantic understanding
+		git_data = optimize_git_data(git_data)
+		prompt = create_prompt(git_data, config.language or "zh", config.commit_template)
+	end
+	
+	-- Enhanced context with advanced analysis
+	local advanced_analysis = require("advanced_analysis")
+	local context = advanced_analysis.analyze_commit_context(git_data)
+	
+	-- Add context to prompt
+	prompt = prompt .. "\n\n" .. context.enhanced_context
 	
 	-- Log prompt size for monitoring without truncation
 	if #prompt > 50000 then
@@ -352,5 +367,10 @@ function M.generate_commit(config)
 
 	send_api_request(api_key, data)
 end
+
+-- Export functions for use by other modules
+M.collect_git_data = collect_git_data
+M.optimize_git_data = optimize_git_data
+M.prepare_request_data = prepare_request_data
 
 return M
