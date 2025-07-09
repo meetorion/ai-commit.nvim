@@ -16,20 +16,20 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ### Key Features
 
 - Multi-language support (zh, en, ja, ko, es, fr, de, ru) with language-specific prompts
-- Custom commit message templates via `commit_template` configuration
-- Request length limits to prevent API errors (8KB diff, 2KB commits, 12KB total)
-- Intelligent text truncation with line-break preservation
+- Custom commit message templates via `commit_template` configuration  
+- Intelligent diff optimization with context preservation
 - Async operations using plenary.nvim jobs
 - Automatic git commit and optional push functionality
+- Comprehensive error handling for various API response codes
 
 ### Configuration System
 
 The plugin uses a table-based configuration in `M.config` with these key options:
 - `openrouter_api_key` - API key (can use OPENROUTER_API_KEY env var)
 - `model` - AI model selection (default: "qwen/qwen-2.5-72b-instruct:free")
-- `language` - Output language for commit messages
+- `language` - Output language for commit messages (default: "zh")
 - `commit_template` - Custom prompt template with %s placeholders for diff and commits
-- `auto_push` - Whether to automatically push after commit
+- `auto_push` - Whether to automatically push after commit (default: false)
 
 ## Development
 
@@ -49,26 +49,37 @@ The plugin integrates with OpenRouter.ai using:
 ### Core Workflow
 
 1. Validate API key (config or environment variable)
-2. Collect git data (staged diff with -U10 context, recent 5 commits)
-3. Validate and truncate data to prevent oversized requests
+2. Collect git data (staged diff with -U15 context, recent 5 commits)
+3. Optimize diff content while preserving semantic meaning
 4. Generate language-specific prompt using template
 5. Send async API request via plenary.curl
 6. Parse response and extract clean commit message
 7. Execute git commit using plenary.job
 8. Optionally push changes if auto_push is enabled
 
+### Diff Optimization
+
+The plugin includes intelligent diff optimization (`optimize_diff_content`) that:
+- Preserves diff headers and hunk markers
+- Keeps all added/removed lines
+- Limits consecutive context lines to 3 with ellipsis for omitted content
+- Maintains semantic meaning while reducing request size
+
 ### Testing
 
-No specific test framework is configured. Manual testing involves staging changes and running `:AICommit` command.
+No specific test framework is configured. Manual testing involves:
+1. Stage changes with `git add`
+2. Run `:AICommit` command
+3. Verify commit message generation and application
 
 ### Key Functions
 
-- `validate_api_key()` - Checks for API key in config or environment
-- `collect_git_data()` - Gathers staged diff and recent commits
-- `validate_and_truncate_git_data()` - Prevents oversized API requests
-- `create_prompt()` - Builds language-specific prompt from template
-- `handle_api_response()` - Parses API response and extracts commit message
-- `commit_changes()` - Executes git commit and optional push operations
+- `validate_api_key()` - Checks for API key in config or environment (lua/commit_generator.lua:140)
+- `collect_git_data()` - Gathers staged diff and recent commits (lua/commit_generator.lua:152)
+- `optimize_diff_content()` - Optimizes diff while preserving semantic meaning (lua/commit_generator.lua:9)
+- `create_prompt()` - Builds language-specific prompt from template (lua/commit_generator.lua:168)
+- `handle_api_response()` - Parses API response and extracts commit message (lua/commit_generator.lua:235)
+- `commit_changes()` - Executes git commit and optional push operations (lua/commit_generator.lua:203)
 
 ## Usage Commands
 

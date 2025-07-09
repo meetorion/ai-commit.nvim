@@ -124,17 +124,33 @@ Git diff:
 Recent commits (for context):
 %s
 
-请生成一个详细而准确的commit消息，要求：
-1. 使用常规commit格式 (type(scope): description)
-2. 准确描述变更的内容和原因
-3. 标题控制在50字符以内
-4. 如果需要，可以包含更详细的描述
-5. 关注变更的业务价值和技术影响
-6. 使用清晰、专业的语言
-7. 深入理解代码变更的语义和目的
-8. 考虑变更对整个项目的影响
+请生成一个详细而准确的commit消息，严格按照以下格式：
 
-只返回commit消息，不要包含其他格式或额外文本。
+**格式要求：**
+1. 第一行：简洁的标题，使用常规commit格式 (type(scope): description)，控制在50字符以内
+2. 第二行：空行
+3. 第三行开始：详细的描述信息，包含：
+   - 变更的具体内容和原因
+   - 解决的问题或新增的功能
+   - 技术实现细节（如有必要）
+   - 对用户或系统的影响
+   - 相关的Issue或PR编号（如果有）
+
+**内容要求：**
+- 使用命令式语态（如"修复"而不是"修复了"）
+- 清晰描述变更的业务价值和技术影响
+- 如果是多个文件的变更，解释整体的改动逻辑
+- 提及任何重要的技术决策或权衡
+
+**示例格式：**
+feat(auth): 添加用户登录状态持久化功能
+
+- 实现基于localStorage的登录状态保存机制
+- 添加自动登录检查和token刷新逻辑
+- 优化用户体验，避免频繁重新登录
+- 增强安全性，添加token过期处理
+
+请严格按照上述格式生成commit消息，不要包含其他格式标记或额外文本。
 ]]
 
 local function validate_api_key(config)
@@ -242,25 +258,54 @@ local function handle_api_response(response)
 			local cleaned_message = message_content
 				:gsub("^```[^%s]*%s*", "") -- Remove opening code block
 				:gsub("%s*```$", "") -- Remove closing code block
-				:gsub("^%d+%.%s*", "") -- Remove "1. "
-				:gsub("^%*%*(.-)%*%*", "%1") -- Remove **text**
-				:gsub("^%*%s*", "") -- Remove "* "
-				:gsub("^%-+%s*", "") -- Remove "- "
 				:gsub("^%s+", "") -- Remove leading whitespace
 				:gsub("%s+$", "") -- Remove trailing whitespace
 
-			-- Get the first meaningful line as the commit message
-			local commit_message = ""
-			for line in cleaned_message:gmatch("[^\n]+") do
+			-- Parse the commit message more intelligently to preserve multi-line format
+			local lines = {}
+			local found_content = false
+			
+			for line in cleaned_message:gmatch("[^\n]*") do
 				local clean_line = line:gsub("^%s+", ""):gsub("%s+$", "")
-				if clean_line ~= "" and not clean_line:match("^[%u%s]+:$") and clean_line:match("%S") then
-					commit_message = clean_line
+				
+				-- Skip empty lines at the beginning
+				if not found_content and clean_line == "" then
+					goto continue
+				end
+				
+				-- Skip format instruction lines
+				if clean_line:match("^%*%*格式要求：%*%*") or 
+				   clean_line:match("^%*%*内容要求：%*%*") or
+				   clean_line:match("^%*%*示例格式：%*%*") or
+				   clean_line:match("^%d+%.%s") or
+				   clean_line:match("^%-%-%-") then
+					goto continue
+				end
+				
+				-- Stop at example section
+				if clean_line:match("^feat%(") and not found_content then
 					break
 				end
+				
+				-- Mark that we found actual content
+				if clean_line ~= "" and not found_content then
+					found_content = true
+				end
+				
+				-- Add the line (including empty lines once we started)
+				if found_content then
+					table.insert(lines, line)
+				end
+				
+				::continue::
 			end
-
-			if commit_message ~= "" then
-				vim.notify("Generated commit message: " .. commit_message, vim.log.levels.INFO)
+			
+			-- Join lines back together and clean up
+			local commit_message = table.concat(lines, "\n"):gsub("^%s+", ""):gsub("%s+$", "")
+			
+			-- Ensure we have at least a title line
+			if commit_message ~= "" and commit_message:match("%S") then
+				vim.notify("Generated commit message: " .. commit_message:gsub("\n", "\\n"), vim.log.levels.INFO)
 				commit_changes(commit_message)
 			else
 				vim.notify("No valid commit message was generated. Try again or modify your changes.", vim.log.levels.WARN)
