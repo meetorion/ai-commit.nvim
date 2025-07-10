@@ -120,3 +120,25 @@ If no custom template is provided, the plugin uses its default comprehensive tem
 ## Commands
 
 - `:AICommit` - Generate and apply an AI commit message
+- `:AICommitImpact` - Analyze the impact of staged changes
+- `:AICommitImpactAI` - Analyze impact with AI enhancement (coming soon)
+
+## Development Setup
+
+For local development and testing, you can load the plugin from your local directory:
+
+```lua
+-- Using lazy.nvim
+{
+  dir = "~/work/ai-commit.nvim",  -- Path to your local clone
+  dependencies = { "nvim-lua/plenary.nvim" },
+  config = function()
+    require("ai-commit").setup({
+      openrouter_api_key = vim.env.OPENROUTER_API_KEY,
+      language = "zh",
+    })
+  end,
+}
+```
+
+See `example-config.lua` for a complete configuration example with all available options.

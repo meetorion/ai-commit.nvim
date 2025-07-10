@@ -18,8 +18,24 @@ M.generate_commit = function()
   require("commit_generator").generate_commit(M.config)
 end
 
+M.analyze_impact = function()
+  require("commit_impact_analyzer").analyze_commit_impact()
+end
+
+M.analyze_impact_with_ai = function()
+  require("commit_impact_analyzer").analyze_commit_impact_with_ai(M.config)
+end
+
 vim.api.nvim_create_user_command("AICommit", function()
   M.generate_commit()
+end, {})
+
+vim.api.nvim_create_user_command("AICommitImpact", function()
+  M.analyze_impact()
+end, {})
+
+vim.api.nvim_create_user_command("AICommitImpactAI", function()
+  M.analyze_impact_with_ai()
 end, {})
 
 return M
