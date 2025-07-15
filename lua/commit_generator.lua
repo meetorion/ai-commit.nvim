@@ -1,6 +1,10 @@
 local M = {}
 
-local openrouter_api_endpoint = "https://openrouter.ai/api/v1/chat/completions"
+-- API endpoints for different providers
+local api_endpoints = {
+	openrouter = "https://openrouter.ai/api/v1/chat/completions",
+	deepseek = "https://api.deepseek.com/chat/completions",
+}
 
 -- Configuration for improved diff processing
 local MAX_CONTEXT_LINES = 15  -- Context lines for git diff to balance detail and size
@@ -154,14 +158,35 @@ feat(auth): 添加用户登录状态持久化功能
 ]]
 
 local function validate_api_key(config)
-	local api_key = config.openrouter_api_key or vim.env.OPENROUTER_API_KEY
-	if not api_key then
+	local api_provider = config.api_provider or "openrouter"
+	local api_key = nil
+	
+	if api_provider == "openrouter" then
+		api_key = config.openrouter_api_key or vim.env.OPENROUTER_API_KEY
+		if not api_key then
+			vim.notify(
+				"OpenRouter API key not found. Please set OPENROUTER_API_KEY environment variable or configure openrouter_api_key in your config",
+				vim.log.levels.ERROR
+			)
+			return nil
+		end
+	elseif api_provider == "deepseek" then
+		api_key = config.deepseek_api_key or vim.env.DEEPSEEK_API_KEY
+		if not api_key then
+			vim.notify(
+				"DeepSeek API key not found. Please set DEEPSEEK_API_KEY environment variable or configure deepseek_api_key in your config",
+				vim.log.levels.ERROR
+			)
+			return nil
+		end
+	else
 		vim.notify(
-			"OpenRouter API key not found. Please set OPENROUTER_API_KEY environment variable or configure openrouter_api_key in your config",
+			"Unsupported API provider: " .. api_provider .. ". Supported providers: openrouter, deepseek",
 			vim.log.levels.ERROR
 		)
 		return nil
 	end
+	
 	return api_key
 end
 
@@ -247,13 +272,26 @@ local function commit_changes(message)
 	}):start()
 end
 
--- TODO: Refactor this
 local function handle_api_response(response)
+	-- Debug: Log the raw response
+	vim.notify("API Response Status: " .. response.status, vim.log.levels.DEBUG)
+	
 	if response.status == 200 then
-		local data = vim.json.decode(response.body)
+		local ok, data = pcall(vim.json.decode, response.body)
+		if not ok then
+			vim.notify("Failed to parse API response JSON: " .. response.body, vim.log.levels.ERROR)
+			return
+		end
+
+		-- Debug: Log response structure
+		vim.notify("API Response data: " .. vim.inspect(data), vim.log.levels.DEBUG)
 
 		if data.choices and #data.choices > 0 and data.choices[1].message and data.choices[1].message.content then
 			local message_content = data.choices[1].message.content
+			
+			-- Debug: Log raw message content
+			vim.notify("Raw AI response: " .. message_content, vim.log.levels.DEBUG)
+			
 			-- Clean up the message content by removing extra formatting
 			local cleaned_message = message_content
 				:gsub("^```[^%s]*%s*", "") -- Remove opening code block
@@ -261,58 +299,74 @@ local function handle_api_response(response)
 				:gsub("^%s+", "") -- Remove leading whitespace
 				:gsub("%s+$", "") -- Remove trailing whitespace
 
-			-- Parse the commit message more intelligently to preserve multi-line format
+			-- Simplified parsing: Try to extract meaningful commit message
 			local lines = {}
-			local found_content = false
+			local found_valid_line = false
 			
 			for line in cleaned_message:gmatch("[^\n]*") do
 				local clean_line = line:gsub("^%s+", ""):gsub("%s+$", "")
 				
-				-- Skip empty lines at the beginning
-				if not found_content and clean_line == "" then
+				-- Skip completely empty lines at the start
+				if not found_valid_line and clean_line == "" then
 					goto continue
 				end
 				
-				-- Skip format instruction lines
-				if clean_line:match("^%*%*格式要求：%*%*") or 
-				   clean_line:match("^%*%*内容要求：%*%*") or
-				   clean_line:match("^%*%*示例格式：%*%*") or
-				   clean_line:match("^%d+%.%s") or
-				   clean_line:match("^%-%-%-") then
+				-- Skip obvious instruction/format lines
+				if clean_line:match("^%*%*") or -- Bold format markers
+				   clean_line:match("^格式要求") or
+				   clean_line:match("^内容要求") or
+				   clean_line:match("^示例格式") or
+				   clean_line:match("^请严格按照") or
+				   clean_line:match("^不要包含") then
 					goto continue
 				end
 				
-				-- Stop at example section
-				if clean_line:match("^feat%(") and not found_content then
-					break
-				end
-				
-				-- Mark that we found actual content
-				if clean_line ~= "" and not found_content then
-					found_content = true
-				end
-				
-				-- Add the line (including empty lines once we started)
-				if found_content then
+				-- If we find a line that looks like a commit (starts with type or has colon)
+				if clean_line:match("^[a-zA-Z]+[%(:]") or clean_line:match(":") then
+					found_valid_line = true
+					table.insert(lines, line)
+				-- Once we found valid content, include subsequent lines too
+				elseif found_valid_line then
+					table.insert(lines, line)
+				-- Or if it's just regular text content
+				elseif clean_line ~= "" and not clean_line:match("^[%d%.%-]") then
+					found_valid_line = true
 					table.insert(lines, line)
 				end
 				
 				::continue::
 			end
 			
+			-- Fallback: if no structured format found, use first non-empty meaningful line
+			if #lines == 0 then
+				for line in cleaned_message:gmatch("[^\n]+") do
+					local clean_line = line:gsub("^%s+", ""):gsub("%s+$", "")
+					if clean_line ~= "" and 
+					   not clean_line:match("^%*%*") and
+					   not clean_line:match("^%d+%.") and
+					   clean_line:match("%S") then
+						table.insert(lines, clean_line)
+						break
+					end
+				end
+			end
+			
 			-- Join lines back together and clean up
 			local commit_message = table.concat(lines, "\n"):gsub("^%s+", ""):gsub("%s+$", "")
+			
+			-- Debug: Log final commit message
+			vim.notify("Parsed commit message: '" .. commit_message .. "'", vim.log.levels.DEBUG)
 			
 			-- Ensure we have at least a title line
 			if commit_message ~= "" and commit_message:match("%S") then
 				vim.notify("Generated commit message: " .. commit_message:gsub("\n", "\\n"), vim.log.levels.INFO)
 				commit_changes(commit_message)
 			else
-				vim.notify("No valid commit message was generated. Try again or modify your changes.", vim.log.levels.WARN)
+				vim.notify("No valid commit message was generated. Raw response: " .. message_content, vim.log.levels.WARN)
 			end
 		else
 			vim.notify(
-				"Received empty response from model. The model may be warming up, try again in a few moments.",
+				"Received empty response from model. Raw response: " .. response.body,
 				vim.log.levels.WARN
 			)
 		end
@@ -355,12 +409,15 @@ local function handle_api_response(response)
 	end
 end
 
-local function send_api_request(api_key, data)
+local function send_api_request(api_key, data, config)
 	vim.schedule(function()
 		vim.notify("Generating commit message...", vim.log.levels.INFO)
 	end)
 
-	require("plenary.curl").post(openrouter_api_endpoint, {
+	local api_provider = config.api_provider or "openrouter"
+	local endpoint = api_endpoints[api_provider]
+	
+	require("plenary.curl").post(endpoint, {
 		headers = {
 			content_type = "application/json",
 			authorization = "Bearer " .. api_key,
@@ -395,7 +452,7 @@ function M.generate_commit(config)
 	
 	local data = prepare_request_data(prompt, config.model)
 
-	send_api_request(api_key, data)
+	send_api_request(api_key, data, config)
 end
 
 return M

@@ -10,22 +10,39 @@ return {
   },
   config = function()
     require("ai-commit").setup({
-      -- API key (required)
-      -- Option 1: Set directly (not recommended for public configs)
-      -- openrouter_api_key = "your-api-key-here",
+      -- API Provider Configuration
+      api_provider = "openrouter", -- Options: "openrouter", "deepseek"
       
-      -- Option 2: Use environment variable (recommended)
+      -- OpenRouter API Configuration
       openrouter_api_key = vim.env.OPENROUTER_API_KEY,
       
+      -- DeepSeek API Configuration (alternative to OpenRouter)
+      -- api_provider = "deepseek",
+      -- deepseek_api_key = vim.env.DEEPSEEK_API_KEY,
+      
       -- Model selection
-      model = "qwen/qwen-2.5-72b-instruct:free", -- Free model
-      -- model = "anthropic/claude-3.5-sonnet", -- Premium model
+      model = "qwen/qwen-2.5-72b-instruct:free", -- For OpenRouter
+      -- model = "deepseek-chat", -- For DeepSeek
       
       -- Language for commit messages
       language = "zh", -- Options: "zh", "en", "ja", "ko", "es", "fr", "de", "ru"
       
       -- Auto push after commit
       auto_push = false,
+      
+      -- Smart branch configuration
+      smart_branch = {
+        auto_create = false, -- Auto-create without confirmation
+        max_keywords = 3, -- Max keywords in branch name
+        max_length = 40, -- Max branch name length
+        ai_enhanced = true, -- Use AI for better naming
+        custom_prefixes = {
+          feature = "feat/",
+          fix = "bugfix/",
+          hotfix = "urgent/",
+          docs = "doc/",
+        }
+      },
       
       -- Custom commit template (optional)
       -- commit_template = [[
@@ -41,10 +58,12 @@ return {
     { "<leader>gc", "<cmd>AICommit<cr>", desc = "Generate AI commit message" },
     { "<leader>gi", "<cmd>AICommitImpact<cr>", desc = "Analyze commit impact" },
     { "<leader>gI", "<cmd>AICommitImpactAI<cr>", desc = "AI-enhanced impact analysis" },
+    { "<leader>gb", "<cmd>AIBranch<cr>", desc = "Create smart branch" },
+    { "<leader>gB", "<cmd>AIBranchAI<cr>", desc = "Create AI-enhanced branch" },
   },
   
   -- Optional: Commands
-  cmd = { "AICommit", "AICommitImpact", "AICommitImpactAI" },
+  cmd = { "AICommit", "AICommitImpact", "AICommitImpactAI", "AIBranch", "AIBranchAI" },
 }
 
 -- For packer.nvim users:
