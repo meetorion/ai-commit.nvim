@@ -33,6 +33,13 @@ A Neovim plugin that generates meaningful commit messages using AI based on your
 - Configurable branch prefixes and naming rules
 - Interactive branch name selection and editing
 
+### ✂️ Smart Commit Splitting
+- **NEW!** Intelligent splitting of large commits into focused units
+- Multiple grouping strategies: by file type, module, functionality, size
+- Interactive selection and custom grouping options
+- Automatic commit creation with meaningful messages
+- Preserve commit history clarity and reviewability
+
 ### ⚡ Additional Features
 - Optional automatic push after commit
 - Asynchronous operations without UI blocking
@@ -196,6 +203,13 @@ If no custom template is provided, the plugin uses its default comprehensive tem
 2. Run `:AICommitImpact` to see potential impact analysis
 3. Review the detailed report showing affected areas and recommendations
 
+### Commit Splitting
+1. Stage a large set of changes using `git add`
+2. Run `:AICommitSplit` for interactive splitting with smart grouping suggestions
+3. Or run `:AICommitQuickSplit` for automatic splitting by file type
+4. Review and customize the suggested groupings
+5. The plugin will create multiple focused commits automatically
+
 ## Commands
 
 ### Commit Generation
@@ -209,6 +223,10 @@ If no custom template is provided, the plugin uses its default comprehensive tem
 ### Smart Branch Management
 - `:AIBranch` - Create intelligent branch based on staged changes
 - `:AIBranchAI` - Create branch with AI-enhanced naming
+
+### Commit Splitting
+- `:AICommitSplit` - Split large commits into smaller, focused commits
+- `:AICommitQuickSplit` - Auto-split commits by file type
 
 ## Development Setup
 

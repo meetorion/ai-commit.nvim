@@ -74,6 +74,14 @@ M.create_smart_branch_with_ai = function()
   end
 end
 
+M.split_large_commit = function()
+  require("commit_splitter").split_large_commit()
+end
+
+M.quick_split_commit = function()
+  require("commit_splitter").quick_split_commit()
+end
+
 vim.api.nvim_create_user_command("AICommit", function()
   M.generate_commit()
 end, {})
@@ -96,6 +104,14 @@ end, {})
 
 vim.api.nvim_create_user_command("AIBranchAI", function()
   M.create_smart_branch_with_ai()
+end, {})
+
+vim.api.nvim_create_user_command("AICommitSplit", function()
+  M.split_large_commit()
+end, {})
+
+vim.api.nvim_create_user_command("AICommitQuickSplit", function()
+  M.quick_split_commit()
 end, {})
 
 return M
