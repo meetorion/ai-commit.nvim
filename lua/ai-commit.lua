@@ -82,6 +82,14 @@ M.quick_split_commit = function()
   require("commit_splitter").quick_split_commit()
 end
 
+M.auto_split_and_commit = function()
+  require("auto_commit_splitter").auto_split_and_commit()
+end
+
+M.preview_auto_split = function()
+  require("auto_commit_splitter").preview_auto_split()
+end
+
 vim.api.nvim_create_user_command("AICommit", function()
   M.generate_commit()
 end, {})
@@ -112,6 +120,14 @@ end, {})
 
 vim.api.nvim_create_user_command("AICommitQuickSplit", function()
   M.quick_split_commit()
+end, {})
+
+vim.api.nvim_create_user_command("AICommitAutoSplit", function()
+  M.auto_split_and_commit()
+end, {})
+
+vim.api.nvim_create_user_command("AICommitPreviewSplit", function()
+  M.preview_auto_split()
 end, {})
 
 return M
