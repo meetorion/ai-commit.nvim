@@ -332,39 +332,96 @@ local function display_analysis(files, changes_summary, suggested_groups)
 	return table.concat(lines, "\n")
 end
 
--- 交互式分组选择
-local function interactive_group_selection(files, suggested_groups)
-	if #suggested_groups == 0 then
-		vim.notify("当前变更较少，建议作为单个commit提交", vim.log.levels.INFO)
-		return
-	end
-	
-	-- 准备选择列表
-	local options = {}
-	for i, group in ipairs(suggested_groups) do
-		table.insert(options, string.format("%d. %s - %s", i, group.name, group.description))
-	end
-	table.insert(options, "自定义分组")
-	table.insert(options, "取消操作")
-	
-	vim.ui.select(options, {
-		prompt = "选择分组策略:",
-		format_item = function(item)
-			return item
-		end
-	}, function(choice)
-		if not choice or choice == "取消操作" then
-			return
-		end
-		
-		if choice == "自定义分组" then
-			custom_grouping(files)
-		else
-			-- 解析选择的分组
-			local group_index = tonumber(choice:match("^(%d+)%."))
-			if group_index and suggested_groups[group_index] then
-				execute_group_commit(suggested_groups[group_index])
+-- 继续拆分剩余文件
+local function continue_splitting()
+	vim.defer_fn(function()
+		vim.ui.select({"继续拆分剩余文件", "完成拆分"}, {
+			prompt = "选择下一步操作:"
+		}, function(choice)
+			if choice == "继续拆分剩余文件" then
+				M.split_large_commit()
+			else
+				vim.notify("Commit拆分完成！", vim.log.levels.INFO)
 			end
+		end)
+	end, 1000)
+end
+
+-- 提交指定文件
+local function commit_files(file_paths, description)
+	local Job = require("plenary.job")
+	
+	-- 重置暂存区
+	Job:new({
+		command = "git",
+		args = {"reset", "HEAD"},
+		on_exit = function(_, return_val)
+			if return_val == 0 then
+				-- 重新暂存选中的文件
+				local add_args = {"add"}
+				for _, path in ipairs(file_paths) do
+					table.insert(add_args, path)
+				end
+				
+				Job:new({
+					command = "git",
+					args = add_args,
+					on_exit = function(_, add_return_val)
+						if add_return_val == 0 then
+							-- 提交
+							Job:new({
+								command = "git",
+								args = {"commit", "-m", description},
+								on_exit = function(_, commit_return_val)
+									if commit_return_val == 0 then
+										vim.notify(string.format("成功提交: %s", description), vim.log.levels.INFO)
+										-- 继续处理剩余文件
+										continue_splitting()
+									else
+										vim.notify("提交失败", vim.log.levels.ERROR)
+									end
+								end
+							}):start()
+						else
+							vim.notify("重新暂存文件失败", vim.log.levels.ERROR)
+						end
+					end
+				}):start()
+			else
+				vim.notify("重置暂存区失败", vim.log.levels.ERROR)
+			end
+		end
+	}):start()
+end
+
+-- 执行分组提交
+local function execute_group_commit(group)
+	local file_paths = {}
+	for _, file in ipairs(group.files) do
+		table.insert(file_paths, file.path)
+	end
+	
+	-- 显示即将提交的文件
+	local confirmation = string.format(
+		"即将提交以下文件:\n\n%s\n\n描述: %s\n\n确认提交吗？",
+		table.concat(vim.tbl_map(function(f) return "  " .. f.path end, group.files), "\n"),
+		group.description
+	)
+	
+	vim.ui.select({"是", "否", "编辑commit信息"}, {
+		prompt = confirmation,
+	}, function(choice)
+		if choice == "是" then
+			commit_files(file_paths, group.description)
+		elseif choice == "编辑commit信息" then
+			vim.ui.input({
+				prompt = "编辑commit信息: ",
+				default = group.description
+			}, function(new_description)
+				if new_description and new_description ~= "" then
+					commit_files(file_paths, new_description)
+				end
+			end)
 		end
 	end)
 end
@@ -417,98 +474,41 @@ local function custom_grouping(files)
 	end)
 end
 
--- 执行分组提交
-local function execute_group_commit(group)
-	local file_paths = {}
-	for _, file in ipairs(group.files) do
-		table.insert(file_paths, file.path)
+-- 交互式分组选择
+local function interactive_group_selection(files, suggested_groups)
+	if #suggested_groups == 0 then
+		vim.notify("当前变更较少，建议作为单个commit提交", vim.log.levels.INFO)
+		return
 	end
 	
-	-- 显示即将提交的文件
-	local confirmation = string.format(
-		"即将提交以下文件:\n\n%s\n\n描述: %s\n\n确认提交吗？",
-		table.concat(vim.tbl_map(function(f) return "  " .. f.path end, group.files), "\n"),
-		group.description
-	)
+	-- 准备选择列表
+	local options = {}
+	for i, group in ipairs(suggested_groups) do
+		table.insert(options, string.format("%d. %s - %s", i, group.name, group.description))
+	end
+	table.insert(options, "自定义分组")
+	table.insert(options, "取消操作")
 	
-	vim.ui.select({"是", "否", "编辑commit信息"}, {
-		prompt = confirmation,
+	vim.ui.select(options, {
+		prompt = "选择分组策略:",
+		format_item = function(item)
+			return item
+		end
 	}, function(choice)
-		if choice == "是" then
-			commit_files(file_paths, group.description)
-		elseif choice == "编辑commit信息" then
-			vim.ui.input({
-				prompt = "编辑commit信息: ",
-				default = group.description
-			}, function(new_description)
-				if new_description and new_description ~= "" then
-					commit_files(file_paths, new_description)
-				end
-			end)
+		if not choice or choice == "取消操作" then
+			return
+		end
+		
+		if choice == "自定义分组" then
+			custom_grouping(files)
+		else
+			-- 解析选择的分组
+			local group_index = tonumber(choice:match("^(%d+)%."))
+			if group_index and suggested_groups[group_index] then
+				execute_group_commit(suggested_groups[group_index])
+			end
 		end
 	end)
-end
-
--- 提交指定文件
-local function commit_files(file_paths, description)
-	local Job = require("plenary.job")
-	
-	-- 重置暂存区
-	Job:new({
-		command = "git",
-		args = {"reset", "HEAD"},
-		on_exit = function(_, return_val)
-			if return_val == 0 then
-				-- 重新暂存选中的文件
-				local add_args = {"add"}
-				for _, path in ipairs(file_paths) do
-					table.insert(add_args, path)
-				end
-				
-				Job:new({
-					command = "git",
-					args = add_args,
-					on_exit = function(_, add_return_val)
-						if add_return_val == 0 then
-							-- 提交
-							Job:new({
-								command = "git",
-								args = {"commit", "-m", description},
-								on_exit = function(_, commit_return_val)
-									if commit_return_val == 0 then
-										vim.notify(string.format("成功提交: %s", description), vim.log.levels.INFO)
-										-- 继续处理剩余文件
-										continue_splitting()
-									else
-										vim.notify("提交失败", vim.log.levels.ERROR)
-									end
-								end
-							}):start()
-						else
-							vim.notify("重新暂存文件失败", vim.log.levels.ERROR)
-						end
-					end
-				}):start()
-			else
-				vim.notify("重置暂存区失败", vim.log.levels.ERROR)
-			end
-		end
-	}):start()
-end
-
--- 继续拆分剩余文件
-local function continue_splitting()
-	vim.defer_fn(function()
-		vim.ui.select({"继续拆分剩余文件", "完成拆分"}, {
-			prompt = "选择下一步操作:"
-		}, function(choice)
-			if choice == "继续拆分剩余文件" then
-				M.split_large_commit()
-			else
-				vim.notify("Commit拆分完成！", vim.log.levels.INFO)
-			end
-		end)
-	end, 1000)
 end
 
 -- 主函数：分析并拆分大型commit
