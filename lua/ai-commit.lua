@@ -3,38 +3,38 @@ local M = {}
 M.config = {
   -- API provider configuration
   api_provider = "openrouter", -- "openrouter" or "deepseek"
-  
+
   -- OpenRouter API configuration
   openrouter_api_key = nil,
-  
-  -- DeepSeek API configuration  
+
+  -- DeepSeek API configuration
   deepseek_api_key = nil,
-  
+
   -- Model configuration
   model = "qwen/qwen-2.5-72b-instruct:free", -- For OpenRouter
   -- model = "deepseek-chat", -- For DeepSeek
-  
+
   auto_push = false,
-  language = "zh", -- Default language for commit messages: "zh" (Chinese), "en" (English), "ja" (Japanese), "ko" (Korean), etc.
+  language = "zh",      -- Default language for commit messages: "zh" (Chinese), "en" (English), "ja" (Japanese), "ko" (Korean), etc.
   commit_template = nil, -- Custom commit message template (optional)
-  
+
   -- Smart branch configuration
   smart_branch = {
     auto_create = false, -- Whether to create branch automatically without confirmation
-    max_keywords = 3, -- Maximum keywords in branch name
-    max_length = 40, -- Maximum branch name length
+    max_keywords = 3,  -- Maximum keywords in branch name
+    max_length = 40,   -- Maximum branch name length
     ai_enhanced = false, -- Use AI to enhance branch naming
     custom_prefixes = { -- Custom prefixes for each branch type
-      -- feature = "feat/",
-      -- fix = "bugfix/",
-      -- hotfix = "urgent/",
-      -- docs = "doc/",
-      -- refactor = "refactor/",
-      -- style = "style/",
-      -- test = "test/",
-      -- chore = "chore/",
-    }
-  }
+      feature = "feat/",
+      fix = "bugfix/",
+      hotfix = "urgent/",
+      docs = "doc/",
+      refactor = "refactor/",
+      style = "style/",
+      test = "test/",
+      chore = "chore/",
+    },
+  },
 }
 
 M.setup = function(opts)
